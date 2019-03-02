@@ -5,46 +5,16 @@ import math
 
 
 class VideoHandler:
+    images = []
+    videos = []
     def __init__(self):
         return None
+
+    def addVideo(self,video):
+        self.videos.append(video)
+
     def splitVideo(self,video):
 
-        images= []
-        # Playing video from file:
-        cap = cv2.VideoCapture(video.path)
-
-        try:
-            if not os.path.exists('data'):
-                os.makedirs('data')
-        except OSError:
-            print ('Error: Creating directory of data')
-
-        frameRate = cap.get(5) #frame rate
-        currentFrame = 0
-        while(True):
-            frameId = cap.get(1) #current frame number
-            # Capture frame-by-frame
-            ret, frame = cap.read()
-
-            # Saves image of the current frame in jpg file
-            if (frameId % math.floor(frameRate) == 0):
-                name = './data/frame' + str(currentFrame) + '.jpg'
-                print ('Creating...' + name)
-                cv2.imwrite(name, frame)
-                images.append('frame'+str(currentFrame) + '.jpg')
-
-                # To stop duplicate images
-                currentFrame += 1
-                print (images)
-
-        # When everything done, release the capture
-        cap.release()
-        cv2.destroyAllWindows()
-        print ("done")
-
-    def splitVideo2(self,video):
-
-        images =[]
         try:
             if not os.path.exists('data'):
                 os.makedirs('data')
@@ -61,27 +31,42 @@ class VideoHandler:
                 break
             if (frameId % math.floor(frameRate) == 0):
                 filename = './data/frame' +  str(int(x)) + ".jpg";
-                images.append('frame'+str(int(x)) + '.jpg')
+                self.images.append('frame'+str(int(x)) + '.jpg')
                 x+=1
                 cv2.imwrite(filename, frame)
 
         cap.release()
         print ("Done!")
-        print (images)
+        print (self.images)
 
-    def playVideo(self,video):
+    def compareImages(self):
+        
+        original = cv2.imread(image1)
+        image_to_compare = cv2.imread(image2)
 
-        cap = cv2.VideoCapture(video.path)
-        '''
-        Make sure your_video is in the same dir, else mention the full path.
-        '''
-        while True:
-            ret, frame = cap.read()
-            gray = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-            cv2.imshow('frame',frame)
-            cv2.imshow('grayF',gray)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                 break
+        # 1) Check if 2 images are equals
+        if original.shape == image_to_compare.shape:
+            print("The images have same size and channels")
+            difference = cv2.subtract(original, image_to_compare)
+            b, g, r = cv2.split(difference)
 
-        cap.release()
-        cv2.destroyAllWindows()
+            if cv2.countNonZero(b) == 0 and cv2.countNonZero(g) == 0 and cv2.countNonZero(r) == 0:
+                print("The images are completely Equal")
+            else:
+                print("The images are NOT equal")
+                # 2) Check for similarities between the 2 images
+
+                sift = cv2.xfeatures2d.SIFT_create()
+                kp_1, desc_1 = sift.detectAndCompute(original, None)
+                kp_2, desc_2 = sift.detectAndCompute(image_to_compare, None)
+                index_params = dict(algorithm=0, trees=5)
+                search_params = dict()
+                flann = cv2.FlannBasedMatcher(index_params, search_params)
+
+                matches = flann.knnMatch(desc_1, desc_2, k=2)
+                good_points = []
+                ratio = 0.4
+                for m, n in matches:
+                    if m.distance < ratio*n.distance:
+                        good_points.append(m)
+                print(len(good_points))

@@ -5,6 +5,8 @@ from VideoHandler import VideoHandler
 
 app=Flask(__name__)
 
+videoHandler = VideoHandler()
+
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 @app.route('/')
 def home():
@@ -33,11 +35,14 @@ def upload():
         print(destination)
         file.save(destination)
         video = Video(filename,destination)
-        videoHandler = VideoHandler()
-        #print(videoHandler.splitVideo2(video))
-        #videoHandler.playVideo(video)
-    return render_template('complete.html')
+        videoHandler.addVideo(video)
+    return render_template("complete.html",variable=video.path)
 
+@app.route("/generateTextFile")
+def generateTextFile():
+    video=videoHandler.videos[0]
+    videoHandler.splitVideo(video)
+    return render_template('textGenerated.html')
 
 if __name__ == '__main__':
     app.run(debug=True)
